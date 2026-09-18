@@ -24,15 +24,6 @@ const {
 
       <h1>Bindra Hosiery</h1>
 
-      <h2
-        style={{
-          fontWeight: "700",
-          marginTop: "-10px",
-        }}
-      >
-        A Unit of Bindra Hosiery
-      </h2>
-
       <p
         style={{
           marginTop: "20px",
