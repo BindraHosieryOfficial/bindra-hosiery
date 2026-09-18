@@ -52,8 +52,7 @@ export default function TermsAndConditions() {
       </p>
 
       <p style={{ color: "#222" }}>
-        Welcome to <strong>Bindra Hosiery</strong>, a unit
-        of Bindra Hosiery. By accessing or using
+        Welcome to <strong>Bindra Hosiery</strong>.By accessing or using
         our app, you agree to these Terms &
         Conditions.
       </p>
