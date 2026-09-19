@@ -12,7 +12,6 @@ import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import Payment from "./pages/Payment";
 import OrderSuccess from "./pages/OrderSuccess";
-import Welcome from "./pages/Welcome";
 import Login from "./pages/Login";
 import Profile from "./pages/Profile";
 import Wishlist from "./pages/Wishlist";
@@ -52,7 +51,7 @@ export default function App() {
     <CategoryProvider>
       <Routes>
         {/* Welcome */}
-        <Route path="/" element={<Welcome />} />
+      <Route path="/" element={<Login />} />
 
         {/* Login */}
         <Route path="/login" element={<Login />} />
