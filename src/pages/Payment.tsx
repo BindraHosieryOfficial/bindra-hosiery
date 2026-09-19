@@ -110,7 +110,7 @@ export default function Payment() {
       // Create Razorpay Order through backend
 
       const orderResponse = await fetch(
-        "http://localhost:5000/create-order",
+        "https://bindra-hosiery.onrender.com/create-order",
         {
           method: "POST",
           headers: {
@@ -191,7 +191,7 @@ currency: "INR",
 
             const verifyResponse =
               await fetch(
-                "http://localhost:5000/verify-payment",
+                "https://bindra-hosiery.onrender.com/verify-payment",
                 {
                   method: "POST",
                   headers: {
