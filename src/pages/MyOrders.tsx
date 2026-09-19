@@ -1,9 +1,14 @@
 import { useOrder } from "../context/OrderContext";
+import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
-
 export default function MyOrders() {
   const { orders, setOrders } = useOrder();
+  const { user } = useAuth();
   const navigate = useNavigate();
+    const myOrders = orders.filter(
+    (order: any) =>
+      order.customer?.mobile === user?.mobile
+  );
   function handleCancelOrder(orderId: number) {
   const confirmCancel = window.confirm(
     "Are you sure you want to cancel this order?"
@@ -35,7 +40,7 @@ export default function MyOrders() {
     >
       <h1>My Orders</h1>
 
-      {orders.length === 0 ? (
+      {myOrders.length === 0 ? (
         <div
           style={{
             padding: "20px",
@@ -52,7 +57,7 @@ export default function MyOrders() {
           </p>
         </div>
       ) : (
-        [...orders].reverse().map((order) => (
+        [...myOrders].reverse().map((order) => (
           <div
             key={order.id}
             style={{

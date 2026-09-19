@@ -52,17 +52,14 @@ const { login } = useAuth();
       />
 
       <button
-       onClick={() => {
+  onClick={() => {
     if (mobile.length !== 10) {
       alert("Please enter a valid 10-digit mobile number.");
       return;
     }
 
-   login(mobile);
-
-alert("Login Successful (Demo)");
-
-navigate("/home");
+    login(mobile);
+    navigate("/home");
   }}
         style={{
           marginTop: "25px",
@@ -75,7 +72,7 @@ navigate("/home");
           cursor: "pointer",
         }}
       >
-        Send OTP
+       Login
       </button>
     </main>
   );
