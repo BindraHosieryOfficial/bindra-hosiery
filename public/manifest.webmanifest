@@ -1,0 +1,16 @@
+{
+  "name": "Bindra Hosiery",
+  "short_name": "Bindra Hosiery",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#111111",
+  "theme_color": "#111111",
+  "icons": [
+    {
+      "src": "/bindra-icon.png",
+      "sizes": "1536x1536",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
