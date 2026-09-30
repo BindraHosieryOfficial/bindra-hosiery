@@ -1,5 +1,13 @@
 import hero from "../assets/banners/hero.png";
+
 export default function HeroBanner() {
+  const handleShopNow = () => {
+    window.scrollTo({
+      top: window.innerHeight,
+      behavior: "smooth",
+    });
+  };
+
   return (
     <div
       style={{
@@ -12,14 +20,15 @@ export default function HeroBanner() {
       }}
     >
       <img
-  src={hero}
- alt="Bindra Hosiery Banner"
-  style={{
-    width: "100%",
-    borderRadius: "16px",
-    marginBottom: "20px",
-  }}
-/>
+        src={hero}
+        alt="Bindra Hosiery Banner"
+        style={{
+          width: "100%",
+          borderRadius: "16px",
+          marginBottom: "20px",
+        }}
+      />
+
       <p
         style={{
           marginTop: "10px",
@@ -30,6 +39,7 @@ export default function HeroBanner() {
       </p>
 
       <button
+        onClick={handleShopNow}
         style={{
           marginTop: "20px",
           padding: "12px 24px",
