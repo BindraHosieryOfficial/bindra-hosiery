@@ -1,21 +1,35 @@
 import { useNavigate } from "react-router-dom";
 import { useProduct } from "../context/ProductContext";
+import { supabase } from "../lib/supabase";
 
 export default function AdminProducts() {
   const navigate = useNavigate();
 
  const { products, setProducts } = useProduct();
   
-function handleDelete(id: number) {
+async function handleDelete(id: number) {
   const confirmDelete = window.confirm(
     "Are you sure you want to delete this product?"
   );
 
   if (!confirmDelete) return;
 
+  const { error } = await supabase
+    .from("products")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    console.error("Error deleting product:", error);
+    alert("Failed to delete product. Please try again.");
+    return;
+  }
+
   setProducts(
     products.filter((product: any) => product.id !== id)
   );
+
+  alert("Product Deleted Successfully!");
 }
   return (
     <main

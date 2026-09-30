@@ -8,15 +8,25 @@ export default function ProtectedAdminRoute() {
 
   useEffect(() => {
     checkAccess();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      checkAccess();
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   async function checkAccess() {
     try {
       const {
-        data: { user },
-      } = await supabase.auth.getUser();
+        data: { session },
+      } = await supabase.auth.getSession();
 
-      if (!user) {
+      if (!session?.user) {
         setAllowed(false);
         setLoading(false);
         return;
@@ -25,10 +35,14 @@ export default function ProtectedAdminRoute() {
       const { data: roleData, error } = await supabase
         .from("user_roles")
         .select("role")
-        .eq("user_id", user.id)
-        .single();
+        .eq("user_id", session.user.id)
+        .maybeSingle();
 
-      if (error || roleData?.role !== "admin") {
+      if (
+        error ||
+        (roleData?.role !== "admin" &&
+          roleData?.role !== "manager")
+      ) {
         setAllowed(false);
       } else {
         setAllowed(true);

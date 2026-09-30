@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useProduct } from "../context/ProductContext";
 import { useCategory } from "../context/CategoryContext";
+import { supabase } from "../lib/supabase";
 
 type SizeStock = {
   name: string;
@@ -10,7 +10,6 @@ type SizeStock = {
 
 export default function AddProduct() {
   const navigate = useNavigate();
-  const { products, setProducts } = useProduct();
   const { categories, addCategory } = useCategory();
 
   const [product, setProduct] = useState({
@@ -28,33 +27,61 @@ export default function AddProduct() {
 
   const [newSize, setNewSize] = useState("");
 
-  function handleImageUpload(
-    e: React.ChangeEvent<HTMLInputElement>
-  ) {
-    if (!e.target.files) return;
+ async function handleImageUpload(
+  e: React.ChangeEvent<HTMLInputElement>
+) {
+  if (!e.target.files) return;
 
-    const files = Array.from(e.target.files);
+  const files = Array.from(e.target.files);
 
-    Promise.all(
-      files.map(
-        (file) =>
-          new Promise<string>((resolve) => {
-            const reader = new FileReader();
+  const uploadedImages: string[] = [];
 
-            reader.onload = () => {
-              resolve(reader.result as string);
-            };
+  for (const file of files) {
+    const fileExtension =
+      file.name.split(".").pop() || "jpg";
 
-            reader.readAsDataURL(file);
-          })
-      )
-    ).then((images) => {
-      setProduct((prev) => ({
-        ...prev,
-        images,
-      }));
+    const fileName = `${crypto.randomUUID()}.${fileExtension}`;
+
+    const filePath = `products/${fileName}`;
+
+   const { error: uploadError } =
+  await supabase.storage
+    .from("product-images")
+    .upload(filePath, file, {
+      cacheControl: "3600",
+      upsert: false,
+      contentType: file.type,
     });
+
+    if (uploadError) {
+      console.error(
+        "Image upload error:",
+        uploadError
+      );
+
+      alert(
+        "Failed to upload product image. Please try again."
+      );
+
+      return;
+    }
+
+    const {
+      data: publicUrlData,
+    } = supabase.storage
+      .from("product-images")
+      .getPublicUrl(filePath);
+
+    uploadedImages.push(
+      publicUrlData.publicUrl
+    );
   }
+
+  setProduct((prev) => ({
+    ...prev,
+    images: uploadedImages,
+  }));
+}
 
   function handleChange(
     e: React.ChangeEvent<
@@ -130,7 +157,7 @@ export default function AddProduct() {
     }));
   }
 
-  function handleSaveProduct() {
+async function handleSaveProduct() {
     if (!product.name || !product.category) {
       alert("Please fill Product Name and Category.");
       return;
@@ -157,11 +184,30 @@ export default function AddProduct() {
       createdAt: new Date().toISOString(),
     };
 
-    setProducts([...products, newProduct]);
+  const { error } = await supabase
+  .from("products")
+  .insert({
+    name: newProduct.name,
+    brand: newProduct.brand,
+    category: newProduct.category,
+    mrp: Number(newProduct.mrp),
+    selling_price: Number(newProduct.sellingPrice),
+    age_group: newProduct.ageGroup,
+    description: newProduct.description,
+    images: newProduct.images,
+    sizes: newProduct.sizes,
+    stock: newProduct.stock,
+  });
 
-    alert("Product Added Successfully!");
+if (error) {
+  console.error("Error adding product:", error);
+  alert("Failed to add product. Please try again.");
+  return;
+}
 
-    navigate("/admin/products");
+alert("Product Added Successfully!");
+
+navigate("/admin/products");
   }
 
   return (
