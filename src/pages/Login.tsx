@@ -57,14 +57,14 @@ export default function Login() {
         >
           <div
             style={{
-              fontSize: "13px",
-              letterSpacing: "4px",
-              fontWeight: "700",
+              fontSize: "14px",
+              letterSpacing: "1px",
+              fontWeight: "600",
               color: "#777",
               marginBottom: "8px",
             }}
           >
-            BINDRA
+            Welcome to
           </div>
 
           <h1
@@ -76,7 +76,7 @@ export default function Login() {
               fontWeight: "700",
             }}
           >
-            HOSIERY
+            BINDRA HOSIERY
           </h1>
 
           <p
@@ -91,26 +91,15 @@ export default function Login() {
           </p>
         </div>
 
-        {/* Welcome */}
+        {/* Login Subtitle */}
         <div
           style={{
             marginBottom: "25px",
           }}
         >
-          <h2
-            style={{
-              margin: 0,
-              fontSize: "24px",
-              color: "#171717",
-              fontWeight: "650",
-            }}
-          >
-            Welcome Back
-          </h2>
-
           <p
             style={{
-              margin: "8px 0 0",
+              margin: 0,
               color: "#777",
               fontSize: "14px",
               lineHeight: "1.5",
