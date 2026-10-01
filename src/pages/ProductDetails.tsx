@@ -49,11 +49,6 @@ export default function ProductDetails() {
       ? product.images[0]
       : "";
 
-  /*
-    Product-level stock is used when the product
-    does not have any sizes.
-  */
-
   const productLevelStock = Math.max(
     0,
     Number(
@@ -63,10 +58,6 @@ export default function ProductDetails() {
         0
     ) || 0
   );
-
-  /*
-    Supports both old and new size formats.
-  */
 
   const normalizedSizes = Array.isArray(product.sizes)
     ? product.sizes
@@ -110,14 +101,6 @@ export default function ProductDetails() {
       String(size.name).trim() ===
       String(selectedSize).trim()
   );
-
-  /*
-    If product has sizes:
-    selected size stock is used.
-
-    If product has no sizes:
-    product-level stock is used.
-  */
 
   const selectedStock = hasSizes
     ? selectedSizeData?.stock || 0
@@ -169,13 +152,6 @@ export default function ProductDetails() {
   }
 
   function increaseQuantity() {
-    /*
-      For products with sizes, size must be selected.
-
-      For products without sizes, quantity
-      can increase directly.
-    */
-
     if (hasSizes && !selectedSize) {
       alert("Please select a size.");
       return;
@@ -204,26 +180,21 @@ export default function ProductDetails() {
     }
   }
 
-  function handleAddToCart() {
+  function validatePurchase() {
     if (isGuest) {
       alert("Please login first.");
       navigate("/login");
-      return;
+      return false;
     }
-
-    /*
-      Size is required only when the product
-      actually has sizes.
-    */
 
     if (hasSizes && !selectedSize) {
       alert("Please select a size.");
-      return;
+      return false;
     }
 
     if (selectedStock <= 0) {
       alert("This product is currently out of stock.");
-      return;
+      return false;
     }
 
     if (quantity > selectedStock) {
@@ -232,6 +203,14 @@ export default function ProductDetails() {
           selectedStock === 1 ? "" : "s"
         } available.`
       );
+      return false;
+    }
+
+    return true;
+  }
+
+  function handleAddToCart() {
+    if (!validatePurchase()) {
       return;
     }
 
@@ -273,13 +252,7 @@ export default function ProductDetails() {
         name: product.name,
         price: sellingPrice,
         image: image,
-
-        /*
-          Size will be an empty string for
-          products that don't have sizes.
-        */
         size: selectedSize,
-
         quantity: quantity,
       });
     }
@@ -287,6 +260,25 @@ export default function ProductDetails() {
     setCart(updatedCart);
 
     alert("Product added to cart.");
+  }
+
+  function handleBuyNow() {
+    if (!validatePurchase()) {
+      return;
+    }
+
+    const buyNowItem = {
+      id: product.id,
+      name: product.name,
+      price: sellingPrice,
+      image: image,
+      size: selectedSize,
+      quantity: quantity,
+    };
+
+    setCart([buyNowItem]);
+
+    navigate("/checkout");
   }
 
   return (
@@ -383,8 +375,6 @@ export default function ProductDetails() {
         {product.description}
       </p>
 
-      {/* SIZE SECTION ONLY FOR PRODUCTS WITH SIZES */}
-
       {hasSizes && (
         <>
           <h3>Available Sizes</h3>
@@ -464,8 +454,6 @@ export default function ProductDetails() {
         </>
       )}
 
-      {/* SELECTED SIZE INFO */}
-
       {hasSizes && selectedSize && (
         <p
           style={{
@@ -533,8 +521,6 @@ export default function ProductDetails() {
         </button>
       </div>
 
-      {/* ADD TO CART */}
-
       <button
         onClick={handleAddToCart}
         disabled={
@@ -566,6 +552,44 @@ export default function ProductDetails() {
           : selectedStock <= 0
           ? "Out of Stock"
           : "Add to Cart"}
+      </button>
+
+      <button
+        onClick={handleBuyNow}
+        disabled={
+          (hasSizes && !selectedSize) ||
+          selectedStock <= 0
+        }
+        style={{
+          width: "100%",
+          padding: "16px",
+          marginTop: "12px",
+          background:
+            (hasSizes && !selectedSize) ||
+            selectedStock <= 0
+              ? "#999"
+              : "#fff",
+          color:
+            (hasSizes && !selectedSize) ||
+            selectedStock <= 0
+              ? "#fff"
+              : "#111",
+          border: "1px solid #111",
+          borderRadius: "12px",
+          fontSize: "16px",
+          fontWeight: "600",
+          cursor:
+            (hasSizes && !selectedSize) ||
+            selectedStock <= 0
+              ? "not-allowed"
+              : "pointer",
+        }}
+      >
+        {hasSizes && !selectedSize
+          ? "Select Size"
+          : selectedStock <= 0
+          ? "Out of Stock"
+          : "Buy Now"}
       </button>
     </main>
   );

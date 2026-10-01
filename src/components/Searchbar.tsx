@@ -1,4 +1,5 @@
 import type { ChangeEvent } from "react";
+
 type SearchBarProps = {
   searchText: string;
   setSearchText: React.Dispatch<React.SetStateAction<string>>;
@@ -9,7 +10,13 @@ export default function SearchBar({
   setSearchText,
 }: SearchBarProps) {
   return (
-    <div style={{ margin: "20px 0" }}>
+    <div
+      style={{
+        width: "100%",
+        margin: "20px 0",
+        boxSizing: "border-box",
+      }}
+    >
       <input
         type="text"
         placeholder="Search products..."
@@ -19,6 +26,7 @@ export default function SearchBar({
         }
         style={{
           width: "100%",
+          boxSizing: "border-box",
           padding: "12px",
           fontSize: "16px",
           borderRadius: "8px",
