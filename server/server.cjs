@@ -11,10 +11,23 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+
+// ========================================
+// RAZORPAY CONFIG
+// ========================================
+
 const razorpay = new Razorpay({
   key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
+
+console.log(
+  "Razorpay mode:",
+  process.env.RAZORPAY_KEY_ID?.startsWith("rzp_live_")
+    ? "LIVE"
+    : "NOT LIVE"
+);
+
 
 app.get("/", (req, res) => {
   res.json({
@@ -37,12 +50,18 @@ app.post("/create-order", async (req, res) => {
       });
     }
 
-    const order =
-      await razorpay.orders.create({
-        amount: Math.round(amount * 100),
-        currency: "INR",
-        receipt: `bindra hosiery_${Date.now()}`,
-      });
+    const order = await razorpay.orders.create({
+      amount: Math.round(amount * 100),
+      currency: "INR",
+      receipt: `bindra_hosiery_${Date.now()}`,
+    });
+
+    console.log("Razorpay order created:", {
+      id: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      status: order.status,
+    });
 
     res.json(order);
 
@@ -53,8 +72,7 @@ app.post("/create-order", async (req, res) => {
     );
 
     res.status(500).json({
-      message:
-        "Unable to create Razorpay order",
+      message: "Unable to create Razorpay order",
     });
   }
 });
@@ -81,8 +99,7 @@ app.post(
       ) {
         return res.status(400).json({
           success: false,
-          message:
-            "Missing payment details",
+          message: "Missing payment details",
         });
       }
 
@@ -90,8 +107,7 @@ app.post(
         crypto
           .createHmac(
             "sha256",
-            process.env
-              .RAZORPAY_KEY_SECRET
+            process.env.RAZORPAY_KEY_SECRET
           )
           .update(
             razorpay_order_id +
@@ -101,21 +117,20 @@ app.post(
           .digest("hex");
 
       const isValid =
-        generatedSignature ===
-        razorpay_signature;
+        generatedSignature === razorpay_signature;
 
       if (!isValid) {
         return res.status(400).json({
           success: false,
-          message:
-            "Payment verification failed",
+          message: "Payment verification failed",
         });
       }
 
+      console.log("Payment verified successfully.");
+
       return res.json({
         success: true,
-        message:
-          "Payment verified successfully",
+        message: "Payment verified successfully",
       });
 
     } catch (error) {
@@ -126,8 +141,7 @@ app.post(
 
       return res.status(500).json({
         success: false,
-        message:
-          "Payment verification error",
+        message: "Payment verification error",
       });
     }
   }
