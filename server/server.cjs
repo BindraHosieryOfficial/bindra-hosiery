@@ -13,20 +13,33 @@ app.use(express.json());
 
 
 // ========================================
-// RAZORPAY CONFIG
+// RAZORPAY CREDENTIAL DIAGNOSTIC
+// ========================================
+
+const razorpayKeyId = (process.env.RAZORPAY_KEY_ID || "").trim();
+const razorpayKeySecret = (process.env.RAZORPAY_KEY_SECRET || "").trim();
+
+console.log("Razorpay credential check:", {
+  keyIdPresent: Boolean(razorpayKeyId),
+  keyIdMode: razorpayKeyId.startsWith("rzp_live_")
+    ? "LIVE"
+    : razorpayKeyId.startsWith("rzp_test_")
+    ? "TEST"
+    : "UNKNOWN",
+  keyIdLast4: razorpayKeyId.slice(-4),
+  secretPresent: Boolean(razorpayKeySecret),
+  secretLength: razorpayKeySecret.length,
+});
+
+
+// ========================================
+// RAZORPAY INSTANCE
 // ========================================
 
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
+  key_id: razorpayKeyId,
+  key_secret: razorpayKeySecret,
 });
-
-console.log(
-  "Razorpay mode:",
-  process.env.RAZORPAY_KEY_ID?.startsWith("rzp_live_")
-    ? "LIVE"
-    : "NOT LIVE"
-);
 
 
 app.get("/", (req, res) => {
@@ -66,10 +79,10 @@ app.post("/create-order", async (req, res) => {
     res.json(order);
 
   } catch (error) {
-    console.error(
-      "Razorpay Order Error:",
-      error
-    );
+    console.error("Razorpay Order Error:", {
+      statusCode: error.statusCode,
+      error: error.error,
+    });
 
     res.status(500).json({
       message: "Unable to create Razorpay order",
@@ -82,70 +95,63 @@ app.post("/create-order", async (req, res) => {
 // VERIFY RAZORPAY PAYMENT
 // ========================================
 
-app.post(
-  "/verify-payment",
-  (req, res) => {
-    try {
-      const {
-        razorpay_order_id,
-        razorpay_payment_id,
-        razorpay_signature,
-      } = req.body;
+app.post("/verify-payment", (req, res) => {
+  try {
+    const {
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature,
+    } = req.body;
 
-      if (
-        !razorpay_order_id ||
-        !razorpay_payment_id ||
-        !razorpay_signature
-      ) {
-        return res.status(400).json({
-          success: false,
-          message: "Missing payment details",
-        });
-      }
-
-      const generatedSignature =
-        crypto
-          .createHmac(
-            "sha256",
-            process.env.RAZORPAY_KEY_SECRET
-          )
-          .update(
-            razorpay_order_id +
-              "|" +
-              razorpay_payment_id
-          )
-          .digest("hex");
-
-      const isValid =
-        generatedSignature === razorpay_signature;
-
-      if (!isValid) {
-        return res.status(400).json({
-          success: false,
-          message: "Payment verification failed",
-        });
-      }
-
-      console.log("Payment verified successfully.");
-
-      return res.json({
-        success: true,
-        message: "Payment verified successfully",
-      });
-
-    } catch (error) {
-      console.error(
-        "Payment Verification Error:",
-        error
-      );
-
-      return res.status(500).json({
+    if (
+      !razorpay_order_id ||
+      !razorpay_payment_id ||
+      !razorpay_signature
+    ) {
+      return res.status(400).json({
         success: false,
-        message: "Payment verification error",
+        message: "Missing payment details",
       });
     }
+
+    const generatedSignature = crypto
+      .createHmac("sha256", razorpayKeySecret)
+      .update(
+        razorpay_order_id +
+        "|" +
+        razorpay_payment_id
+      )
+      .digest("hex");
+
+    const isValid =
+      generatedSignature === razorpay_signature;
+
+    if (!isValid) {
+      return res.status(400).json({
+        success: false,
+        message: "Payment verification failed",
+      });
+    }
+
+    console.log("Payment verified successfully.");
+
+    return res.json({
+      success: true,
+      message: "Payment verified successfully",
+    });
+
+  } catch (error) {
+    console.error(
+      "Payment Verification Error:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message: "Payment verification error",
+    });
   }
-);
+});
 
 
 // ========================================
