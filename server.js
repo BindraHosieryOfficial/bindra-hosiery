@@ -18,6 +18,18 @@ const razorpay = new Razorpay({
 
 
 // ========================================
+// RAZORPAY CONNECTION CHECK
+// ========================================
+
+console.log(
+  "Razorpay mode:",
+  process.env.RAZORPAY_KEY_ID?.startsWith("rzp_live_")
+    ? "LIVE"
+    : "NOT LIVE"
+);
+
+
+// ========================================
 // CREATE RAZORPAY ORDER
 // ========================================
 
@@ -34,7 +46,14 @@ app.post("/create-order", async (req, res) => {
     const order = await razorpay.orders.create({
       amount: Math.round(amount * 100),
       currency: "INR",
-      receipt: `order_${Date.now()}`,
+      receipt: `bindra_hosiery_${Date.now()}`,
+    });
+
+    console.log("Razorpay order created:", {
+      id: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      status: order.status,
     });
 
     res.json(order);
