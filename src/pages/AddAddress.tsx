@@ -15,28 +15,84 @@ export default function AddAddress() {
   const [city, setCity] = useState("");
   const [state, setState] = useState("");
   const [type, setType] = useState("Home");
+  const [checkingPincode, setCheckingPincode] = useState(false);
 
-  function handleSave() {
-  const newAddress = {
-    id: Date.now(),
-    name,
-    mobile,
-    house,
-    area,
-    landmark,
-    pincode,
-    city,
-    state,
-    type,
-    isDefault: addresses.length === 0,
-  };
+  async function handleSave() {
+    const cleanPincode = pincode.trim();
 
-  setAddresses([...addresses, newAddress]);
+    // Basic PIN code validation
+    if (!/^\d{6}$/.test(cleanPincode)) {
+      alert("Please enter a valid 6-digit Indian pincode.");
+      return;
+    }
 
-  alert("Address Saved Successfully!");
+    // Verify that the PIN code actually exists in India
+    try {
+      setCheckingPincode(true);
 
-  navigate("/saved-addresses");
-}
+      const response = await fetch(
+        `https://api.postalpincode.in/pincode/${cleanPincode}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Pincode verification failed");
+      }
+
+      const data = await response.json();
+
+      if (
+        !Array.isArray(data) ||
+        data.length === 0 ||
+        data[0]?.Status !== "Success" ||
+        !Array.isArray(data[0]?.PostOffice) ||
+        data[0].PostOffice.length === 0
+      ) {
+        alert(
+          "This pincode is not eligible for delivery. We currently deliver only within India."
+        );
+        return;
+      }
+
+      const firstPostOffice = data[0].PostOffice[0];
+
+      const verifiedCity =
+        firstPostOffice?.District ||
+        firstPostOffice?.Division ||
+        city;
+
+      const verifiedState =
+        firstPostOffice?.State ||
+        state;
+
+      const newAddress = {
+        id: Date.now(),
+        name,
+        mobile,
+        house,
+        area,
+        landmark,
+        pincode: cleanPincode,
+        city: verifiedCity,
+        state: verifiedState,
+        type,
+        isDefault: addresses.length === 0,
+      };
+
+      setAddresses([...addresses, newAddress]);
+
+      alert("Address Saved Successfully!");
+
+      navigate("/saved-addresses");
+    } catch (error) {
+      console.error("Pincode verification error:", error);
+
+      alert(
+        "Unable to verify this pincode right now. Please check the pincode and try again."
+      );
+    } finally {
+      setCheckingPincode(false);
+    }
+  }
 
   return (
     <main
@@ -50,9 +106,21 @@ export default function AddAddress() {
 
       <Input label="Full Name" value={name} setValue={setName} />
       <Input label="Mobile Number" value={mobile} setValue={setMobile} />
-      <Input label="House / Flat / Building" value={house} setValue={setHouse} />
-      <Input label="Area / Street / Locality" value={area} setValue={setArea} />
-      <Input label="Landmark (Optional)" value={landmark} setValue={setLandmark} />
+      <Input
+        label="House / Flat / Building"
+        value={house}
+        setValue={setHouse}
+      />
+      <Input
+        label="Area / Street / Locality"
+        value={area}
+        setValue={setArea}
+      />
+      <Input
+        label="Landmark (Optional)"
+        value={landmark}
+        setValue={setLandmark}
+      />
       <Input label="Pincode" value={pincode} setValue={setPincode} />
       <Input label="City" value={city} setValue={setCity} />
       <Input label="State" value={state} setValue={setState} />
@@ -71,9 +139,14 @@ export default function AddAddress() {
 
       <button
         onClick={handleSave}
-        style={buttonStyle}
+        disabled={checkingPincode}
+        style={{
+          ...buttonStyle,
+          opacity: checkingPincode ? 0.6 : 1,
+          cursor: checkingPincode ? "not-allowed" : "pointer",
+        }}
       >
-        Save Address
+        {checkingPincode ? "Checking Pincode..." : "Save Address"}
       </button>
     </main>
   );
