@@ -130,12 +130,14 @@ export default function Productcard({
       <div
         style={{
           width: "100%",
-          padding: "14px",
-          borderRadius: "12px",
+          padding: "10px",
+          borderRadius: "10px",
           background: "#f5f5f5",
           textAlign: "center",
           fontWeight: "600",
+          fontSize: "14px",
           color: "#111",
+          boxSizing: "border-box",
         }}
       >
         View Details
