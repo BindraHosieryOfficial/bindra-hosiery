@@ -4,6 +4,7 @@ import {
   useEffect,
   useState,
 } from "react";
+import { supabase } from "../lib/supabase";
 
 const AuthContext = createContext<any>(null);
 
@@ -65,8 +66,37 @@ export default function AuthProvider({
     );
   }, [user]);
 
+  async function saveCustomerToSupabase(
+    customer: User
+  ) {
+    if (!customer.mobile) return;
+
+    try {
+      const { error } = await supabase.rpc(
+        "save_customer_login",
+        {
+          p_mobile: customer.mobile,
+          p_name: customer.name || "",
+          p_email: customer.email || "",
+        }
+      );
+
+      if (error) {
+        console.error(
+          "Supabase customer save error:",
+          error
+        );
+      }
+    } catch (error) {
+      console.error(
+        "Supabase customer save error:",
+        error
+      );
+    }
+  }
+
   // Save the currently logged-in user's profile
-  function setUser(updatedUser: User) {
+  async function setUser(updatedUser: User) {
     setUserState(updatedUser);
 
     if (updatedUser.mobile) {
@@ -86,15 +116,17 @@ export default function AuthProvider({
         );
       } catch (error) {
         console.error(
-          "Failed to save customer profile:",
+          "Failed to save customer profile locally:",
           error
         );
       }
+
+      await saveCustomerToSupabase(updatedUser);
     }
   }
 
   // Login using mobile number
-  function login(mobile: string) {
+  async function login(mobile: string) {
     try {
       const savedCustomers =
         localStorage.getItem("customers");
@@ -105,18 +137,18 @@ export default function AuthProvider({
 
       const existingCustomer = customers[mobile];
 
+      let loggedInUser: User;
+
       if (existingCustomer) {
-        setUserState(existingCustomer);
+        loggedInUser = existingCustomer;
       } else {
-        const newUser: User = {
+        loggedInUser = {
           name: "",
           mobile,
           email: "",
         };
 
-        setUserState(newUser);
-
-        customers[mobile] = newUser;
+        customers[mobile] = loggedInUser;
 
         localStorage.setItem(
           "customers",
@@ -124,8 +156,13 @@ export default function AuthProvider({
         );
       }
 
+      setUserState(loggedInUser);
+
       setIsGuest(false);
       setIsLoggedIn(true);
+
+      // Save customer login to Supabase
+      await saveCustomerToSupabase(loggedInUser);
     } catch (error) {
       console.error(
         "Login customer error:",
@@ -141,6 +178,8 @@ export default function AuthProvider({
       setUserState(newUser);
       setIsGuest(false);
       setIsLoggedIn(true);
+
+      await saveCustomerToSupabase(newUser);
     }
   }
 
