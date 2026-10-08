@@ -24,6 +24,50 @@ export default function Productcard({
       ? Math.round(((mrp - price) / mrp) * 100)
       : 0;
 
+  async function handleShare(
+    e: React.MouseEvent<HTMLButtonElement>
+  ) {
+    e.stopPropagation();
+
+    const productUrl = `${window.location.origin}/product/${id}`;
+
+    const shareData = {
+      title: name,
+      text: `Check out ${name} on Bindra Hosiery`,
+      url: productUrl,
+    };
+
+    try {
+      if (
+        navigator.share &&
+        /Android|iPhone|iPad|iPod/i.test(
+          navigator.userAgent
+        )
+      ) {
+        await navigator.share(shareData);
+        return;
+      }
+
+      await navigator.clipboard.writeText(productUrl);
+
+      alert("Product link copied!");
+    } catch (error) {
+      if (
+        error instanceof DOMException &&
+        error.name === "AbortError"
+      ) {
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(productUrl);
+        alert("Product link copied!");
+      } catch {
+        alert(`Copy this product link:\n${productUrl}`);
+      }
+    }
+  }
+
   return (
     <div
       onClick={() => navigate(`/product/${id}`)}
@@ -129,18 +173,45 @@ export default function Productcard({
 
       <div
         style={{
+          display: "flex",
+          gap: "8px",
           width: "100%",
-          padding: "10px",
-          borderRadius: "10px",
-          background: "#f5f5f5",
-          textAlign: "center",
-          fontWeight: "600",
-          fontSize: "14px",
-          color: "#111",
-          boxSizing: "border-box",
         }}
       >
-        View Details
+        <div
+          style={{
+            flex: 1,
+            padding: "10px",
+            borderRadius: "10px",
+            background: "#f5f5f5",
+            textAlign: "center",
+            fontWeight: "600",
+            fontSize: "14px",
+            color: "#111",
+            boxSizing: "border-box",
+          }}
+        >
+          View Details
+        </div>
+
+        <button
+          type="button"
+          onClick={handleShare}
+          style={{
+          padding: "10px",
+borderRadius: "10px",
+background: "#f5f5f5",
+color: "#111",
+border: "none",
+flex: 1,
+            fontWeight: "600",
+            fontSize: "14px",
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+          }}
+        >
+          Share ↗
+        </button>
       </div>
     </div>
   );

@@ -21,6 +21,7 @@ export default function ProductDetails() {
 
   const [selectedSize, setSelectedSize] = useState("");
   const [quantity, setQuantity] = useState(1);
+  const [selectedColor, setSelectedColor] = useState("");
 
   if (!product) {
     return (
@@ -44,9 +45,40 @@ export default function ProductDetails() {
       ? Math.round(((mrp - sellingPrice) / mrp) * 100)
       : 0;
 
+  const colors = Array.isArray(product.colors)
+    ? product.colors.filter(
+        (color: any) =>
+          color &&
+          String(color.name || "").trim()
+      )
+    : [];
+
+  const hasColors = colors.length > 0;
+
+  const activeColor = hasColors
+    ? colors.find(
+        (color: any) =>
+          String(color.name).trim() ===
+          String(selectedColor).trim()
+      ) || colors[0]
+    : null;
+
+  const activeColorImages =
+    activeColor &&
+    Array.isArray(activeColor.images)
+      ? activeColor.images
+      : [];
+
+  const productImages =
+    hasColors && activeColorImages.length > 0
+      ? activeColorImages
+      : Array.isArray(product.images)
+      ? product.images
+      : [];
+
   const image =
-    product.images && product.images.length > 0
-      ? product.images[0]
+    productImages.length > 0
+      ? productImages[0]
       : "";
 
   const productLevelStock = Math.max(
@@ -111,6 +143,30 @@ export default function ProductDetails() {
       Number(item.id) === Number(product.id)
   );
 
+  function handleColorSelect(colorName: string) {
+    setSelectedColor(colorName);
+  }
+
+  async function handleShare() {
+    const productUrl =
+      `${window.location.origin}/product/${product.id}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: product.name,
+          text: `Check out ${product.name} at Bindra Hosiery`,
+          url: productUrl,
+        });
+      } else {
+        await navigator.clipboard.writeText(productUrl);
+        alert("Product link copied!");
+      }
+    } catch {
+      // User cancelled the share
+    }
+  }
+
   function handleWishlist() {
     if (isGuest) {
       alert("Please login first.");
@@ -134,6 +190,7 @@ export default function ProductDetails() {
           name: product.name,
           price: sellingPrice,
           image: image,
+          color: activeColor?.name || "",
         },
       ]);
     }
@@ -218,7 +275,9 @@ export default function ProductDetails() {
       (item: any) =>
         Number(item.id) === Number(product.id) &&
         String(item.size || "").trim() ===
-          String(selectedSize || "").trim()
+          String(selectedSize || "").trim() &&
+        String(item.color || "").trim() ===
+          String(activeColor?.name || "").trim()
     );
 
     const updatedCart = [...cart];
@@ -253,6 +312,7 @@ export default function ProductDetails() {
         price: sellingPrice,
         image: image,
         size: selectedSize,
+        color: activeColor?.name || "",
         quantity: quantity,
       });
     }
@@ -273,6 +333,7 @@ export default function ProductDetails() {
       price: sellingPrice,
       image: image,
       size: selectedSize,
+      color: activeColor?.name || "",
       quantity: quantity,
     };
 
@@ -300,41 +361,100 @@ export default function ProductDetails() {
         }}
       />
 
-      <button
-        onClick={handleWishlist}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: "8px",
-          width: "fit-content",
-          padding: "10px 16px",
-          marginBottom: "20px",
-          borderRadius: "20px",
-          border: "1px solid #555",
-          background: "#1a1a1a",
-          color: "#fff",
-          cursor: "pointer",
-          fontSize: "14px",
-          fontWeight: "600",
-        }}
-      >
-        <span
+      {productImages.length > 1 && (
+        <div
           style={{
-            fontSize: "18px",
-            lineHeight: "1",
-            color: isWishlisted
-              ? "#e63946"
-              : "#fff",
+            display: "flex",
+            gap: "10px",
+            overflowX: "auto",
+            marginBottom: "20px",
           }}
         >
-          {isWishlisted ? "♥" : "♡"}
-        </span>
+          {productImages.map(
+            (img: string, index: number) => (
+              <img
+                key={`${img}-${index}`}
+                src={img}
+                alt={`${product.name} ${index + 1}`}
+                style={{
+                  width: "75px",
+                  height: "75px",
+                  objectFit: "cover",
+                  borderRadius: "10px",
+                  border:
+                    index === 0
+                      ? "2px solid #111"
+                      : "1px solid #ddd",
+                  flexShrink: 0,
+                }}
+              />
+            )
+          )}
+        </div>
+      )}
 
-        {isWishlisted
-          ? "Wishlisted"
-          : "Wishlist"}
-      </button>
+      <div
+        style={{
+          display: "flex",
+          gap: "8px",
+          marginBottom: "20px",
+        }}
+      >
+        <button
+          onClick={handleWishlist}
+          style={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "8px",
+            padding: "10px",
+            borderRadius: "10px",
+            border: "1px solid #555",
+            background: "#1a1a1a",
+            color: "#fff",
+            cursor: "pointer",
+            fontSize: "14px",
+            fontWeight: "600",
+            boxSizing: "border-box",
+          }}
+        >
+          <span
+            style={{
+              fontSize: "18px",
+              lineHeight: "1",
+              color: isWishlisted
+                ? "#e63946"
+                : "#fff",
+            }}
+          >
+            {isWishlisted ? "♥" : "♡"}
+          </span>
+
+          {isWishlisted
+            ? "Wishlisted"
+            : "Wishlist"}
+        </button>
+
+        <button
+          type="button"
+          onClick={handleShare}
+          style={{
+            flex: 1,
+            padding: "10px",
+            borderRadius: "10px",
+            background: "#f5f5f5",
+            color: "#111",
+            border: "none",
+            fontWeight: "600",
+            fontSize: "14px",
+            cursor: "pointer",
+            boxSizing: "border-box",
+          }}
+        >
+          Share ↗
+        </button>
+      </div>
 
       <h1>{product.name}</h1>
 
@@ -363,6 +483,61 @@ export default function ProductDetails() {
           >
             {discount}% OFF
           </p>
+        </>
+      )}
+
+      {hasColors && (
+        <>
+          <h3 style={{ marginTop: "20px" }}>
+            Color
+          </h3>
+
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "10px",
+              marginBottom: "20px",
+            }}
+          >
+            {colors.map((color: any) => {
+              const colorName = String(
+                color.name
+              ).trim();
+
+              const isSelected =
+                colorName ===
+                String(
+                  activeColor?.name || ""
+                ).trim();
+
+              return (
+                <button
+                  key={colorName}
+                  onClick={() =>
+                    handleColorSelect(colorName)
+                  }
+                  style={{
+                    padding: "10px 16px",
+                    borderRadius: "20px",
+                    border: isSelected
+                      ? "2px solid #fff"
+                      : "1px solid #333",
+                    background: isSelected
+                      ? "#fff"
+                      : "#111",
+                    color: isSelected
+                      ? "#111"
+                      : "#fff",
+                    cursor: "pointer",
+                    fontWeight: "600",
+                  }}
+                >
+                  {colorName}
+                </button>
+              );
+            })}
+          </div>
         </>
       )}
 
@@ -426,9 +601,7 @@ export default function ProductDetails() {
                         : "pointer",
                       fontWeight: "600",
                       opacity:
-                        isOutOfStock
-                          ? 0.6
-                          : 1,
+                        isOutOfStock ? 0.6 : 1,
                     }}
                   >
                     <div>

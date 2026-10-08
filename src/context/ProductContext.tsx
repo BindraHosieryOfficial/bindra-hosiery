@@ -9,8 +9,14 @@ import { products as defaultProducts } from "../data/products";
 import { supabase } from "../lib/supabase";
 
 const ProductContext = createContext<any>(null);
+
 async function resolveImageUrl(image: string) {
-  if (!image || !image.includes("/storage/v1/object/public/product-images/")) {
+  if (
+    !image ||
+    !image.includes(
+      "/storage/v1/object/public/product-images/"
+    )
+  ) {
     return image;
   }
 
@@ -32,31 +38,57 @@ async function resolveImageUrl(image: string) {
 
   return URL.createObjectURL(data);
 }
-function mapProduct(product: any) {
-  let images: string[] = [];
 
-  if (Array.isArray(product.images)) {
-    images = product.images.filter(
+function parseImages(images: any): string[] {
+  if (Array.isArray(images)) {
+    return images.filter(
       (image: any) =>
-        typeof image === "string" && image.trim() !== ""
+        typeof image === "string" &&
+        image.trim() !== ""
     );
-  } else if (typeof product.images === "string") {
+  }
+
+  if (typeof images === "string") {
     try {
-      const parsed = JSON.parse(product.images);
+      const parsed = JSON.parse(images);
 
       if (Array.isArray(parsed)) {
-        images = parsed.filter(
+        return parsed.filter(
           (image: any) =>
             typeof image === "string" &&
             image.trim() !== ""
         );
       }
     } catch {
-      if (product.images.trim() !== "") {
-        images = [product.images.trim()];
+      if (images.trim() !== "") {
+        return [images.trim()];
       }
     }
   }
+
+  return [];
+}
+
+function parseColors(colors: any): any[] {
+  if (!Array.isArray(colors)) {
+    return [];
+  }
+
+  return colors
+    .filter(
+      (color: any) =>
+        color &&
+        typeof color.name === "string"
+    )
+    .map((color: any) => ({
+      name: color.name,
+      images: parseImages(color.images),
+    }));
+}
+
+function mapProduct(product: any) {
+  const images = parseImages(product.images);
+  const colors = parseColors(product.colors);
 
   return {
     id: product.id,
@@ -68,6 +100,7 @@ function mapProduct(product: any) {
     ageGroup: product.age_group || "",
     description: product.description || "",
     images,
+    colors,
     sizes: product.sizes || [],
     stock: Number(product.stock || 0),
     createdAt: product.created_at,
@@ -89,56 +122,103 @@ export default function ProductProvider({
     const { data, error } = await supabase
       .from("products")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("created_at", {
+        ascending: false,
+      });
 
     if (error) {
-      console.error("Error loading products:", error);
+      console.error(
+        "Error loading products:",
+        error
+      );
       return;
     }
 
-   if (data && data.length > 0) {
-  const mappedProducts = await Promise.all(
-    data.map(async (product) => {
-      const mappedProduct = mapProduct(product);
+    if (data && data.length > 0) {
+      const mappedProducts = await Promise.all(
+        data.map(async (product) => {
+          const mappedProduct =
+            mapProduct(product);
 
-      const resolvedImages = await Promise.all(
-        mappedProduct.images.map((image: string) =>
-          resolveImageUrl(image)
-        )
+          // Resolve normal product images
+          const resolvedImages =
+            await Promise.all(
+              mappedProduct.images.map(
+                (image: string) =>
+                  resolveImageUrl(image)
+              )
+            );
+
+          // Resolve color-specific images
+          const resolvedColors =
+            await Promise.all(
+              mappedProduct.colors.map(
+                async (color: any) => {
+                  const resolvedColorImages =
+                    await Promise.all(
+                      color.images.map(
+                        (image: string) =>
+                          resolveImageUrl(image)
+                      )
+                    );
+
+                  return {
+                    ...color,
+                    images:
+                      resolvedColorImages,
+                  };
+                }
+              )
+            );
+
+          return {
+            ...mappedProduct,
+            images: resolvedImages,
+            colors: resolvedColors,
+          };
+        })
       );
 
-      return {
-        ...mappedProduct,
-        images: resolvedImages,
-      };
-    })
-  );
-
-  setProducts(mappedProducts);
-  return;
-}
+      setProducts(mappedProducts);
+      return;
+    }
 
     // First-time setup:
     // If Supabase has no products yet,
     // upload the existing demo products.
-    const demoProducts = defaultProducts.map((product: any) => ({
-      name: product.name,
-      brand: product.brand || "Bindra Hosiery",
-      category: product.category,
-      mrp: product.mrp,
-      selling_price: product.sellingPrice,
-      age_group: product.ageGroup || "",
-      description: product.description || "",
-      images: product.images || [],
-      sizes: product.sizes || [],
-      stock: product.stock || 0,
-    }));
+    const demoProducts =
+      defaultProducts.map(
+        (product: any) => ({
+          name: product.name,
+          brand:
+            product.brand ||
+            "Bindra Hosiery",
+          category: product.category,
+          mrp: product.mrp,
+          selling_price:
+            product.sellingPrice,
+          age_group:
+            product.ageGroup || "",
+          description:
+            product.description || "",
+          images:
+            product.images || [],
+          colors:
+            product.colors || [],
+          sizes:
+            product.sizes || [],
+          stock:
+            product.stock || 0,
+        })
+      );
 
-    const { data: insertedProducts, error: insertError } =
-      await supabase
-        .from("products")
-        .insert(demoProducts)
-        .select();
+    const {
+      data: insertedProducts,
+      error: insertError,
+    } = await supabase
+      .from("products")
+      .insert(demoProducts)
+      .select();
 
     if (insertError) {
       console.error(
@@ -149,7 +229,9 @@ export default function ProductProvider({
     }
 
     setProducts(
-      (insertedProducts || []).map(mapProduct)
+      (insertedProducts || []).map(
+        mapProduct
+      )
     );
   }
 
@@ -160,30 +242,35 @@ export default function ProductProvider({
   ) {
     setProducts((currentProducts) =>
       currentProducts.map((product) => {
-        if (Number(product.id) !== Number(productId)) {
+        if (
+          Number(product.id) !==
+          Number(productId)
+        ) {
           return product;
         }
 
         return {
           ...product,
 
-          sizes: (product.sizes || []).map((size: any) => {
-            if (
-              String(size.name).trim() !==
-              String(sizeName).trim()
-            ) {
-              return size;
-            }
+          sizes: (product.sizes || []).map(
+            (size: any) => {
+              if (
+                String(size.name).trim() !==
+                String(sizeName).trim()
+              ) {
+                return size;
+              }
 
-            return {
-              ...size,
-              stock: Math.max(
-                0,
-                Number(size.stock || 0) -
-                  Number(quantity || 0)
-              ),
-            };
-          }),
+              return {
+                ...size,
+                stock: Math.max(
+                  0,
+                  Number(size.stock || 0) -
+                    Number(quantity || 0)
+                ),
+              };
+            }
+          ),
         };
       })
     );
@@ -204,7 +291,8 @@ export default function ProductProvider({
 }
 
 export function useProduct() {
-  const context = useContext(ProductContext);
+  const context =
+    useContext(ProductContext);
 
   if (!context) {
     throw new Error(

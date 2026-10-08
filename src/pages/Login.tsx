@@ -8,13 +8,14 @@ export default function Login() {
 
   const { login, setIsGuest, setIsLoggedIn } = useAuth();
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (mobile.length !== 10) {
       alert("Please enter a valid 10-digit mobile number.");
       return;
     }
 
-    login(mobile);
+    await login(mobile);
+
     navigate("/home");
   };
 
@@ -48,7 +49,6 @@ export default function Login() {
           boxShadow: "0 20px 60px rgba(0,0,0,0.35)",
         }}
       >
-        {/* Brand */}
         <div
           style={{
             textAlign: "center",
@@ -91,12 +91,7 @@ export default function Login() {
           </p>
         </div>
 
-        {/* Login Subtitle */}
-        <div
-          style={{
-            marginBottom: "25px",
-          }}
-        >
+        <div style={{ marginBottom: "25px" }}>
           <p
             style={{
               margin: 0,
@@ -109,7 +104,6 @@ export default function Login() {
           </p>
         </div>
 
-        {/* Mobile Number */}
         <label
           style={{
             display: "block",
@@ -167,7 +161,6 @@ export default function Login() {
           />
         </div>
 
-        {/* Login Button */}
         <button
           onClick={handleLogin}
           style={{
@@ -187,7 +180,6 @@ export default function Login() {
           Login
         </button>
 
-        {/* Divider */}
         <div
           style={{
             display: "flex",
@@ -217,7 +209,6 @@ export default function Login() {
           />
         </div>
 
-        {/* Guest */}
         <button
           onClick={handleGuest}
           style={{
