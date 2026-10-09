@@ -10,7 +10,7 @@ export default function ProductDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const { products } = useProduct();
+  const { products, productsLoading } = useProduct();
   const { cart, setCart } = useCart();
   const { wishlist, setWishlist } = useWishlist();
   const { isGuest } = useAuth();
@@ -23,19 +23,40 @@ export default function ProductDetails() {
   const [quantity, setQuantity] = useState(1);
   const [selectedColor, setSelectedColor] = useState("");
 
-  if (!product) {
-    return (
-      <main
-        style={{
-          maxWidth: "450px",
-          margin: "0 auto",
-          padding: "20px",
-        }}
-      >
-        <h2>Product not found.</h2>
-      </main>
-    );
-  }
+  if (productsLoading) {
+  return (
+    <main
+      style={{
+        maxWidth: "450px",
+        margin: "0 auto",
+        padding: "40px 20px",
+        textAlign: "center",
+      }}
+    >
+      <p style={{ color: "#666", fontSize: "15px" }}>
+        Loading product...
+      </p>
+    </main>
+  );
+}
+
+if (!product) {
+  return (
+    <main
+      style={{
+        maxWidth: "450px",
+        margin: "0 auto",
+        padding: "20px",
+      }}
+    >
+      <h2>Product not found.</h2>
+      <p>This product may no longer be available.</p>
+      <button onClick={() => navigate("/home")}>
+        Continue Shopping
+      </button>
+    </main>
+  );
+}
 
   const sellingPrice = Number(product.sellingPrice) || 0;
   const mrp = Number(product.mrp) || 0;

@@ -1,3 +1,4 @@
+
 import {
   createContext,
   useContext,
@@ -113,126 +114,104 @@ export default function ProductProvider({
   children: React.ReactNode;
 }) {
   const [products, setProducts] = useState<any[]>([]);
+  const [productsLoading, setProductsLoading] = useState(true);
 
   useEffect(() => {
     loadProducts();
   }, []);
 
   async function loadProducts() {
-    const { data, error } = await supabase
-      .from("products")
-      .select("*")
-      .order("created_at", {
-        ascending: false,
-      });
+    setProductsLoading(true);
 
-    if (error) {
-      console.error(
-        "Error loading products:",
-        error
-      );
-      return;
-    }
+    try {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .order("created_at", {
+          ascending: false,
+        });
 
-    if (data && data.length > 0) {
-      const mappedProducts = await Promise.all(
-        data.map(async (product) => {
-          const mappedProduct =
-            mapProduct(product);
+      if (error) {
+        console.error("Error loading products:", error);
+        return;
+      }
 
-          // Resolve normal product images
-          const resolvedImages =
-            await Promise.all(
-              mappedProduct.images.map(
-                (image: string) =>
-                  resolveImageUrl(image)
+      if (data && data.length > 0) {
+        const mappedProducts = await Promise.all(
+          data.map(async (product) => {
+            const mappedProduct = mapProduct(product);
+
+            const resolvedImages = await Promise.all(
+              mappedProduct.images.map((image: string) =>
+                resolveImageUrl(image)
               )
             );
 
-          // Resolve color-specific images
-          const resolvedColors =
-            await Promise.all(
-              mappedProduct.colors.map(
-                async (color: any) => {
-                  const resolvedColorImages =
-                    await Promise.all(
-                      color.images.map(
-                        (image: string) =>
-                          resolveImageUrl(image)
-                      )
-                    );
+            const resolvedColors = await Promise.all(
+              mappedProduct.colors.map(async (color: any) => {
+                const resolvedColorImages = await Promise.all(
+                  color.images.map((image: string) =>
+                    resolveImageUrl(image)
+                  )
+                );
 
-                  return {
-                    ...color,
-                    images:
-                      resolvedColorImages,
-                  };
-                }
-              )
+                return {
+                  ...color,
+                  images: resolvedColorImages,
+                };
+              })
             );
 
-          return {
-            ...mappedProduct,
-            images: resolvedImages,
-            colors: resolvedColors,
-          };
-        })
-      );
+            return {
+              ...mappedProduct,
+              images: resolvedImages,
+              colors: resolvedColors,
+            };
+          })
+        );
 
-      setProducts(mappedProducts);
-      return;
-    }
+        setProducts(mappedProducts);
+        return;
+      }
 
-    // First-time setup:
-    // If Supabase has no products yet,
-    // upload the existing demo products.
-    const demoProducts =
-      defaultProducts.map(
+      const demoProducts = defaultProducts.map(
         (product: any) => ({
           name: product.name,
-          brand:
-            product.brand ||
-            "Bindra Hosiery",
+          brand: product.brand || "Bindra Hosiery",
           category: product.category,
           mrp: product.mrp,
-          selling_price:
-            product.sellingPrice,
-          age_group:
-            product.ageGroup || "",
-          description:
-            product.description || "",
-          images:
-            product.images || [],
-          colors:
-            product.colors || [],
-          sizes:
-            product.sizes || [],
-          stock:
-            product.stock || 0,
+          selling_price: product.sellingPrice,
+          age_group: product.ageGroup || "",
+          description: product.description || "",
+          images: product.images || [],
+          colors: product.colors || [],
+          sizes: product.sizes || [],
+          stock: product.stock || 0,
         })
       );
 
-    const {
-      data: insertedProducts,
-      error: insertError,
-    } = await supabase
-      .from("products")
-      .insert(demoProducts)
-      .select();
+      const {
+        data: insertedProducts,
+        error: insertError,
+      } = await supabase
+        .from("products")
+        .insert(demoProducts)
+        .select();
 
-    if (insertError) {
-      console.error(
-        "Error creating demo products:",
-        insertError
-      );
-      return;
+      if (insertError) {
+        console.error(
+          "Error creating demo products:",
+          insertError
+        );
+        return;
+      }
+
+      setProducts((insertedProducts || []).map(mapProduct));
+    } catch (error) {
+      console.error("Unexpected error loading products:", error);
+    } finally {
+      setProductsLoading(false);
     }
-
-    setProducts(
-      (insertedProducts || []).map(
-        mapProduct
-      )
-    );
   }
 
   async function decreaseStock(
@@ -242,35 +221,29 @@ export default function ProductProvider({
   ) {
     setProducts((currentProducts) =>
       currentProducts.map((product) => {
-        if (
-          Number(product.id) !==
-          Number(productId)
-        ) {
+        if (Number(product.id) !== Number(productId)) {
           return product;
         }
 
         return {
           ...product,
-
-          sizes: (product.sizes || []).map(
-            (size: any) => {
-              if (
-                String(size.name).trim() !==
-                String(sizeName).trim()
-              ) {
-                return size;
-              }
-
-              return {
-                ...size,
-                stock: Math.max(
-                  0,
-                  Number(size.stock || 0) -
-                    Number(quantity || 0)
-                ),
-              };
+          sizes: (product.sizes || []).map((size: any) => {
+            if (
+              String(size.name).trim() !==
+              String(sizeName).trim()
+            ) {
+              return size;
             }
-          ),
+
+            return {
+              ...size,
+              stock: Math.max(
+                0,
+                Number(size.stock || 0) -
+                  Number(quantity || 0)
+              ),
+            };
+          }),
         };
       })
     );
@@ -281,6 +254,7 @@ export default function ProductProvider({
       value={{
         products,
         setProducts,
+        productsLoading,
         decreaseStock,
         refreshProducts: loadProducts,
       }}
@@ -291,8 +265,7 @@ export default function ProductProvider({
 }
 
 export function useProduct() {
-  const context =
-    useContext(ProductContext);
+  const context = useContext(ProductContext);
 
   if (!context) {
     throw new Error(
