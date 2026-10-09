@@ -1,7 +1,15 @@
+
 import { useNavigate } from "react-router-dom";
 
 export default function ContactUs() {
   const navigate = useNavigate();
+
+  const whatsappNumber = "917838611404";
+  const whatsappMessage = encodeURIComponent(
+    "Hello Bindra Hosiery, I need help with my order/product."
+  );
+
+  const whatsappLink = `https://wa.me/${whatsappNumber}?text=${whatsappMessage}`;
 
   return (
     <main
@@ -71,10 +79,37 @@ export default function ContactUs() {
         </h2>
 
         <p style={{ color: "#222" }}>
-          For customer support, please contact us
-          through the contact details provided by
-          Bindra Hosiery.
+          Have a question? Chat with us directly on WhatsApp.
+          We’ll be happy to help you.
         </p>
+
+        <a
+          href={whatsappLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: "10px",
+            width: "100%",
+          padding: "10px 14px",
+maxWidth: "320px",
+margin: "20px auto 0",
+            marginTop: "20px",
+            boxSizing: "border-box",
+            borderRadius: "10px",
+            background: "#25D366",
+            color: "#fff",
+            textDecoration: "none",
+            fontSize: "16px",
+            fontWeight: "700",
+          }}
+        >
+          <span style={{ fontSize: "20px" }}>☏</span>
+          Chat with us on WhatsApp
+        </a>
+
       </section>
 
       <h2
@@ -125,9 +160,8 @@ export default function ContactUs() {
           fontSize: "14px",
         }}
       >
-        Please use the official contact details
-        provided by Bindra Hosiery for
-        customer support.
+        For customer support, please contact us
+        using the WhatsApp button above.
       </p>
     </main>
   );
