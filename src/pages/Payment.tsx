@@ -1,3 +1,4 @@
+
 import { useCart } from "../context/CartContext";
 import { useNavigate } from "react-router-dom";
 import { useOrder } from "../context/OrderContext";
@@ -9,6 +10,9 @@ import { useState } from "react";
 declare global {
   interface Window {
     Razorpay: any;
+    fbq?: (
+      ...args: any[]
+    ) => void;
   }
 }
 
@@ -106,8 +110,7 @@ export default function Payment() {
     setIsProcessing(true);
 
     try {
-      // STEP 1:
-      // Create Razorpay Order through backend
+      // STEP 1: Create Razorpay order through backend.
 
       const orderResponse = await fetch(
         "https://bindra-hosiery.onrender.com/create-order",
@@ -131,11 +134,10 @@ export default function Payment() {
       const razorpayOrder =
         await orderResponse.json();
 
-      // STEP 2:
-      // Load Razorpay Checkout
+      // STEP 2: Load Razorpay Checkout.
 
       const loadRazorpay = () => {
-        return new Promise((resolve) => {
+        return new Promise<boolean>((resolve) => {
           if (window.Razorpay) {
             resolve(true);
             return;
@@ -166,15 +168,15 @@ export default function Payment() {
         );
       }
 
-      // STEP 3:
-      // Razorpay Checkout Options
+      // STEP 3: Razorpay Checkout Options.
 
       const options = {
-       key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
 
-amount: razorpayOrder.amount,
+        amount: razorpayOrder.amount,
 
-currency: "INR",
+        currency: "INR",
+
         name: "Bindra Hosiery",
 
         description:
@@ -186,8 +188,7 @@ currency: "INR",
           paymentResponse: any
         ) {
           try {
-            // STEP 4:
-            // Verify payment through backend
+            // STEP 4: Verify payment through backend.
 
             const verifyResponse =
               await fetch(
@@ -195,8 +196,7 @@ currency: "INR",
                 {
                   method: "POST",
                   headers: {
-                    "Content-Type":
-                      "application/json",
+                    "Content-Type": "application/json",
                   },
                   body: JSON.stringify({
                     razorpay_order_id:
@@ -236,9 +236,8 @@ currency: "INR",
               paymentResponse
             );
 
-            // STEP 5:
-            // Create order only after
-            // successful payment verification
+            // STEP 5: Create order only after
+            // successful payment verification.
 
             const newOrder = {
               id: Date.now(),
@@ -249,22 +248,17 @@ currency: "INR",
 
               status: "Order Placed",
 
-              date:
-                new Date().toISOString(),
+              date: new Date().toISOString(),
 
-              createdAt:
-                new Date().toISOString(),
+              createdAt: new Date().toISOString(),
 
-              paymentMethod:
-                "UPI / Razorpay",
+              paymentMethod: "UPI / Razorpay",
 
               paymentId:
-                paymentResponse
-                  .razorpay_payment_id,
+                paymentResponse.razorpay_payment_id,
 
               razorpayOrderId:
-                paymentResponse
-                  .razorpay_order_id,
+                paymentResponse.razorpay_order_id,
 
               customer: {
                 name: user.name,
@@ -272,8 +266,7 @@ currency: "INR",
                 email: user.email,
               },
 
-              deliveryAddress:
-                selectedAddress,
+              deliveryAddress: selectedAddress,
             };
 
             setOrders([
@@ -281,8 +274,79 @@ currency: "INR",
               newOrder,
             ]);
 
-            // STEP 6:
-            // Decrease stock
+            // STEP 6: Send Meta Purchase event
+            // only after verified payment.
+            // Use the payment ID to avoid sending
+            // the same browser event repeatedly.
+
+            try {
+              const paymentId =
+                paymentResponse.razorpay_payment_id;
+
+              const trackingKey =
+                `meta_purchase_sent_${paymentId}`;
+
+              const alreadySent =
+                localStorage.getItem(trackingKey);
+
+              if (
+                !alreadySent &&
+                typeof window.fbq === "function"
+              ) {
+                const contents = cart.map(
+                  (item: any) => ({
+                    id: String(item.id),
+                    quantity: Number(item.quantity),
+                    item_price: Number(item.price),
+                  })
+                );
+
+                window.fbq(
+                  "track",
+                  "Purchase",
+                  {
+                    value: Number(grandTotal),
+                    currency: "INR",
+                    content_type: "product",
+                    content_ids: contents.map(
+                      (item: any) => item.id
+                    ),
+                    contents,
+                    num_items: contents.reduce(
+                      (total: number, item: any) =>
+                        total + item.quantity,
+                      0
+                    ),
+                  },
+                  {
+                    eventID: String(paymentId),
+                  }
+                );
+
+                localStorage.setItem(
+                  trackingKey,
+                  "true"
+                );
+
+                console.log(
+                  "Meta Purchase event sent:",
+                  paymentId
+                );
+              } else if (!window.fbq) {
+                console.warn(
+                  "Meta Pixel is not available. Purchase event was not sent."
+                );
+              }
+            } catch (trackingError) {
+              // Tracking failure must not block
+              // a successfully verified customer order.
+              console.error(
+                "Meta Purchase tracking error:",
+                trackingError
+              );
+            }
+
+            // STEP 7: Decrease stock.
 
             cart.forEach((item: any) => {
               console.log(
@@ -290,10 +354,8 @@ currency: "INR",
                 {
                   productId: item.id,
                   productName: item.name,
-                  selectedSize:
-                    item.size,
-                  quantity:
-                    item.quantity,
+                  selectedSize: item.size,
+                  quantity: item.quantity,
                 }
               );
 
@@ -304,15 +366,13 @@ currency: "INR",
               );
             });
 
-            // STEP 7:
-            // Clear cart
+            // STEP 8: Clear cart.
 
             setCart([]);
 
             setIsProcessing(false);
 
-            // STEP 8:
-            // Order success page
+            // STEP 9: Show order success page.
 
             navigate("/order-success");
           } catch (error) {
@@ -363,7 +423,8 @@ currency: "INR",
       setIsProcessing(false);
     }
   }
-    return (
+
+  return (
     <main
       style={{
         maxWidth: "450px",
@@ -383,8 +444,7 @@ currency: "INR",
               display: "flex",
               gap: "15px",
               padding: "15px",
-              border:
-                "1px solid #e5e5e5",
+              border: "1px solid #e5e5e5",
               borderRadius: "12px",
               marginBottom: "15px",
               background: "#fff",
@@ -401,11 +461,7 @@ currency: "INR",
               }}
             />
 
-            <div
-              style={{
-                flex: 1,
-              }}
-            >
+            <div style={{ flex: 1 }}>
               <h3
                 style={{
                   margin: 0,
@@ -436,21 +492,17 @@ currency: "INR",
               <div
                 style={{
                   display: "flex",
-                  justifyContent:
-                    "space-between",
+                  justifyContent: "space-between",
                   marginTop: "10px",
                   fontWeight: "600",
                 }}
               >
                 <span>
-                  ₹{item.price} ×{" "}
-                  {item.quantity}
+                  ₹{item.price} × {item.quantity}
                 </span>
 
                 <span>
-                  ₹
-                  {item.price *
-                    item.quantity}
+                  ₹{item.price * item.quantity}
                 </span>
               </div>
             </div>
@@ -463,23 +515,18 @@ currency: "INR",
       <div
         style={{
           display: "flex",
-          justifyContent:
-            "space-between",
+          justifyContent: "space-between",
           marginTop: "10px",
         }}
       >
         <span>Subtotal</span>
-
-        <strong>
-          ₹{subtotal}
-        </strong>
+        <strong>₹{subtotal}</strong>
       </div>
 
       <div
         style={{
           display: "flex",
-          justifyContent:
-            "space-between",
+          justifyContent: "space-between",
           marginTop: "8px",
         }}
       >
@@ -496,16 +543,12 @@ currency: "INR",
         <div
           style={{
             display: "flex",
-            justifyContent:
-              "space-between",
+            justifyContent: "space-between",
             marginTop: "8px",
           }}
         >
           <span>GST</span>
-
-          <strong>
-            ₹{gstAmount}
-          </strong>
+          <strong>₹{gstAmount}</strong>
         </div>
       )}
 
@@ -514,26 +557,16 @@ currency: "INR",
       <div
         style={{
           display: "flex",
-          justifyContent:
-            "space-between",
+          justifyContent: "space-between",
           fontSize: "20px",
           fontWeight: "bold",
         }}
       >
-        <span>
-          Grand Total
-        </span>
-
-        <span>
-          ₹{grandTotal}
-        </span>
+        <span>Grand Total</span>
+        <span>₹{grandTotal}</span>
       </div>
 
-      <hr
-        style={{
-          margin: "25px 0",
-        }}
-      />
+      <hr style={{ margin: "25px 0" }} />
 
       <h3>Payment Method</h3>
 
@@ -551,11 +584,7 @@ currency: "INR",
           readOnly
         />
 
-        <span
-          style={{
-            marginLeft: "10px",
-          }}
-        >
+        <span style={{ marginLeft: "10px" }}>
           UPI Payment
         </span>
       </div>
@@ -575,9 +604,7 @@ currency: "INR",
           cursor: isProcessing
             ? "not-allowed"
             : "pointer",
-          opacity: isProcessing
-            ? 0.6
-            : 1,
+          opacity: isProcessing ? 0.6 : 1,
         }}
       >
         {isProcessing
